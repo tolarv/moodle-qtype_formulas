@@ -661,8 +661,9 @@ class question_formulas_qtype extends default_questiontype {
         $postunit = trim($state->responses[$part->location."_".$part->numbox]);
         
         // Step 2: Use the unit system to check whether the unit in student responses is *convertible* to the true unit
-        global $basic_unit_conversion_rules;
-        $checkunit->assign_default_rules($part->ruleid, $basic_unit_conversion_rules[$part->ruleid][1]);
+        $conversionrules = new unit_conversion_rules;
+        $entry = $conversionrules->entry($part->ruleid);
+        $checkunit->assign_default_rules($part->ruleid, $entry[1]);
         $checkunit->assign_additional_rules($part->otherrule);
         $checked = $checkunit->check_convertibility($postunit, $part->postunit);
         $cfactor = $checked->cfactor;
@@ -926,6 +927,7 @@ class question_formulas_qtype extends default_questiontype {
         $qo = new stdClass;
         $qo->id          = $new_question_id;
         $qo->qtype       = $this->name();
+        $qo->questiontext = backup_todb($info['#']['QUESTIONTEXT']['0']['#']);
         $extras = $this->subquestion_option_extras();
         foreach ($extras as $extra)
             $qo->$extra = backup_todb($data['#'][strtoupper($extra)]['0']['#']);
@@ -988,7 +990,6 @@ class question_formulas_qtype extends default_questiontype {
     
     /// Validating the data from the client, and return errors. If no errors, the $validanswers should be appended by numbox variables
     function validate_instantiation($data, &$validanswers) {
-        global $basic_unit_conversion_rules;
         $form = (object)$data;
         $errors = array();
         
@@ -1023,7 +1024,8 @@ class question_formulas_qtype extends default_questiontype {
                 $errors["otherrule[$idx]"] = get_string('error_rule','qtype_formulas') . $e->getMessage();
             }
             try {
-                $entry = $basic_unit_conversion_rules[$ans->ruleid];
+                $conversionrules = new unit_conversion_rules;
+                $entry = $conversionrules->entry($ans->ruleid);
                 if ($entry === null || $entry[1] === null)  throw new Exception(get_string('error_ruleid','qtype_formulas'));
                 $unitcheck->assign_default_rules($ans->ruleid, $entry[1]);
                 $unitcheck->reparse_all_rules();

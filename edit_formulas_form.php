@@ -15,7 +15,7 @@ require_once($CFG->dirroot.'/question/type/edit_question_form.php');
  * coodinate question type editing form definition.
  */
 class question_edit_formulas_form extends question_edit_form {
-    
+
     /**
     * Add question-type specific form fields.
     *
@@ -23,69 +23,70 @@ class question_edit_formulas_form extends question_edit_form {
     */
     function definition_inner(&$mform) {
         // hide the unused form fields
-        $mform->removeElement('defaultgrade');        
-        $mform->addElement('hidden', 'defaultgrade');        
+        $mform->removeElement('defaultgrade');
+        $mform->addElement('hidden', 'defaultgrade');
         $mform->setType('defaultgrade', PARAM_RAW);
-        
-        $mform->removeElement('penalty');        
-        $mform->addElement('hidden', 'penalty');        
+
+        $mform->removeElement('penalty');
+        $mform->addElement('hidden', 'penalty');
         $mform->setType('penalty', PARAM_NUMBER);
         $mform->setDefault('penalty', 0.1);
-        
+
         $mform->addElement('hidden', 'jsvars');     // used to keep the values during page submission
-        
-        
+
+
         // the random and global variables and the main question
         $mform->insertElementBefore($mform->createElement('static', 'help_formulas', get_string('help'),
             get_string('helpdirection', 'qtype_formulas')) , 'questiontext');
         $mform->setHelpButton('help_formulas', array('questionoptions', get_string('helponquestionoptions', 'qtype_formulas'), 'qtype_formulas'));
-        
+
         $mform->insertElementBefore($mform->createElement('textarea', 'varsrandom', get_string('varsrandom', 'qtype_formulas'),
             array('rows' => 8, 'style' => 'width: 100%')) , 'questiontext');
-            
+
         $mform->insertElementBefore($mform->createElement('textarea', 'varsglobal', get_string('varsglobal', 'qtype_formulas'),
             array('rows' => 10, 'style' => 'width: 100%')) , 'questiontext');
-        
+
         $mform->insertElementBefore($mform->createElement('header','mainq', get_string('mainq', 'qtype_formulas'),
             ''), 'help_formulas');
-        
-        
+
+
         // the subquestion answers
         $creategrades = get_grade_options();
         $this->add_per_answer_fields($mform, get_string('answerno', 'qtype_formulas', '{no}'),
             $creategrades->gradeoptions, 1, 2);
-        
-        
+
+
         // the display options, flow options and the global subquestion options
         $mform->addElement('header','subqoptions',get_string('subqoptions','qtype_formulas'));
-        
+
         $mform->addElement('select', 'showperanswermark', get_string('showperanswermark', 'qtype_formulas'),
             array(get_string('no'), get_string('yes')));
         $mform->setDefault('showperanswermark', 1);
-        
+
         $mform->addElement('select', 'peranswersubmit', get_string('peranswersubmit', 'qtype_formulas'),
             array(get_string('no'), get_string('yes')));
         $mform->setDefault('peranswersubmit', 1);
-        
+
         $mform->addElement('text', 'globaltrialmarkseq', get_string('globaloptions', 'qtype_formulas') . get_string('trialmarkseq', 'qtype_formulas'),
             array('size' => 30));
         $mform->setDefault('trialmarkseq', '');
-        
+
         $mform->addElement('text', 'globalunitpenalty', get_string('globaloptions', 'qtype_formulas') . get_string('unitpenalty', 'qtype_formulas'),
             array('size' => 3));
         $mform->setDefault('unitpenalty', '');
-        
-        global $basic_unit_conversion_rules;
-        foreach ($basic_unit_conversion_rules as $id => $entry)  $default_rule_choice[$id] = $entry[0];
+
+        $conversionrules = new unit_conversion_rules;
+        $allrules = $conversionrules->allrules();
+        foreach ($allrules as $id => $entry)  $default_rule_choice[$id] = $entry[0];
         $mform->addElement('select', 'globalruleid', get_string('globaloptions', 'qtype_formulas') . get_string('ruleid', 'qtype_formulas'),
             $default_rule_choice);
         $mform->setDefault('ruleid', 1);
-        
-        
+
+
         // embed the current plugin url, which will be used by the javascript
         global $QTYPES;
         $fbaseurl = '<script type="text/javascript">var formulasbaseurl='.json_encode($QTYPES[$this->qtype()]->plugin_baseurl()).';</script>';   // temporary hack
-        
+
         // allow instantiate random variables and display the data for instantiated variables
         $mform->addElement('header', 'checkvarshdr', get_string('checkvarshdr','qtype_formulas'));
         $mform->addElement('static', 'numdataset', get_string('numdataset','qtype_formulas'),
@@ -101,17 +102,17 @@ class question_edit_formulas_form extends question_edit_form {
             .'<div id="varsdata_display"></div>');
         $mform->closeHeaderBefore('instantiatevars');
     }
-    
-    
+
+
     /**
     * Add the answer field for a particular subquestion labelled by placeholder.
-    * 
+    *
     * @param MoodleQuickForm $mform the form being built.
     */
     function get_per_answer_fields(&$mform, $label, $gradeoptions, &$repeatedoptions, &$answersoption) {
         $repeated = array();
         $repeated[] =& $mform->createElement('header', 'answerhdr', $label);
-        
+
         $repeated[] =& $mform->createElement('text', 'answermark', get_string('answermark', 'qtype_formulas'),
             array('size' => 3));
         $repeated[] =& $mform->createElement('hidden', 'numbox', '', '');   // its exact value will be computed while validate
@@ -127,22 +128,23 @@ class question_edit_formulas_form extends question_edit_form {
             array('rows' => 6, 'style' => 'width: 100%'));
         $repeated[] =& $mform->createElement('text', 'correctness', get_string('correctness', 'qtype_formulas'),
             array('style' => 'width: 100%'));
-        
+
         $repeated[] =& $mform->createElement('static', '', '<hr class="formulas_seperator1">', '');
         $repeated[] =& $mform->createElement('text', 'unitpenalty', get_string('unitpenalty', 'qtype_formulas'),
             array('size' => 3));
         $repeatedoptions['unitpenalty']['default'] = 1;
         $repeated[] =& $mform->createElement('text', 'postunit', get_string('postunit', 'qtype_formulas'),
             array('size' => 60, 'class' => 'formulas_editing_unit', 'style' => 'width: 100%'));
-        
-        global $basic_unit_conversion_rules;
-        foreach ($basic_unit_conversion_rules as $id => $entry)  $default_rule_choice[$id] = $entry[0];
+
+        $conversionrules = new unit_conversion_rules;
+        $allrules = $conversionrules->allrules();
+        foreach ($allrules as $id => $entry)  $default_rule_choice[$id] = $entry[0];
         $repeated[] =& $mform->createElement('select', 'ruleid', get_string('ruleid', 'qtype_formulas'),
             $default_rule_choice);
         $repeatedoptions['ruleid']['default'] = 1;
         $repeated[] =& $mform->createElement('textarea', 'otherrule', get_string('otherrule', 'qtype_formulas'),
             array('rows' => 3, 'style' => 'width: 100%'));
-        
+
         $repeated[] =& $mform->createElement('static', '', '<hr class="formulas_seperator2">', '<hr>');
         $repeated[] =& $mform->createElement('text', 'placeholder', get_string('placeholder', 'qtype_formulas'),
             array('size' => 20));
@@ -154,12 +156,12 @@ class question_edit_formulas_form extends question_edit_form {
         $repeated[] =& $mform->createElement('hidden', 'feedback', '', '');   // its exact value will be computed while validate
         //$repeated[] =& $mform->createElement('textarea', 'feedback', get_string('feedback', 'qtype_formulas'),
         //    array('rows' => 6, 'style' => 'width: 100%'));
-        
+
         $answersoption = 'answers';
         return $repeated;
     }
-    
-    
+
+
     /**
     * Sets the existing values into the form for the question specific data.
     * It sets the answers before calling the parent function.
@@ -181,29 +183,29 @@ class question_edit_formulas_form extends question_edit_form {
         }
         parent::set_data($question);
     }
-    
-    
+
+
     /**
     * Validating the data returning from the client.
-    * 
+    *
     * The check the basic error as well as the formula error by evaluating one instantiation.
     */
     function validation($data, $files) {
         $errors = parent::validation($data, $files);
-        
+
         global $QTYPES;
         $qt = & $QTYPES[$this->qtype()];
-        
+
         // use the validation defined in the question type, check by instantiating one variable set
         $instantiation_result = $qt->validate($data);
         if (isset($instantiation_result->errors))
             $errors = array_merge($errors, $instantiation_result->errors);
-        
+
         // forward the (first) local error of the options to the global one
         $global_tags = array('trialmarkseq', 'unitpenalty', 'ruleid');
         foreach ($global_tags as $gtag)  if (array_key_exists($gtag.'[0]', $errors))
             $errors['global'.$gtag] = $errors[$gtag.'[0]'];
-        
+
         return $errors;
     }
 
