@@ -34,9 +34,10 @@ class question_formulas_qtype extends default_questiontype {
     
     
     /// return the tags of subquestion answer field of the database/variable
+    /// subqtext, subqtextformat, feedback and feedbackformat are not here as their handling is a special case
     function subquestion_answer_tags() {
         return array('placeholder','answermark','answertype','numbox','vars1','answer','vars2','correctness'
-            ,'unitpenalty','postunit','ruleid','otherrule','trialmarkseq','subqtext','feedback');
+            ,'unitpenalty','postunit','ruleid','otherrule','trialmarkseq');
     }
     
     
@@ -46,10 +47,50 @@ class question_formulas_qtype extends default_questiontype {
     }
     
     
+    function move_files($questionid, $oldcontextid, $newcontextid) {
+        $fs = get_file_storage();
+        
+        parent::move_files($questionid, $oldcontextid, $newcontextid);
+        $this->move_files_in_answers($questionid, $oldcontextid, $newcontextid);
+        $fs->move_area_files_to_new_context($oldcontextid,
+            $newcontextid, 'qtype_formulas', 'subqtext', $questionid);
+    }
+    
+    
+    protected function delete_files($questionid, $contextid) {
+        $fs = get_file_storage();
+
+        parent::delete_files($questionid, $contextid);
+        $fs->delete_area_files($contextid, 'qtype_formulas', 'subqtext', $questionid);
+    }
+    
+    
+    function check_file_access($question, $state, $options, $contextid, $component, $filearea, $args) {
+        $itemid = reset($args);
+        if ($component == 'qtype_formulas' && $filearea == 'answersubqtext') {
+            // check if answer id exists
+            for ($i = 0; $i < count($question->options->answers); $i++) {
+                if ($question->options->answers[$i]->id == $itemid) return true;
+            }
+            return false;
+        }
+        if ($component == 'qtype_formulas' && $filearea == 'answerfeedback') {
+            // check if answer id exists
+            for ($i = 0; $i < count($question->options->answers); $i++) {
+                if ($question->options->answers[$i]->id == $itemid) return true;
+            }
+            return false;
+        }
+        return parent::check_file_access($question, $state, $options, $contextid, $component,
+            $filearea, $args);
+    }
+    
+    
     /// Attempt to get the options in the database, return non-zero value if fail
     function get_question_options_part(&$question) {
-        if (!$question->options->extra = get_record('question_formulas', 'questionid', $question->id))  return 1;
-        if (!$question->options->answers = get_records('question_formulas_answers', 'questionid', $question->id, 'id ASC'))  return 2;
+        global $DB;
+        if (!$question->options->extra = $DB->get_record('question_formulas', array('questionid' => $question->id)))  return 1;
+        if (!$question->options->answers = $DB->get_records('question_formulas_answers', array('questionid' => $question->id), 'id ASC'))  return 2;
         if (count($question->options->answers) == 0)  return 3; // It must have at least one answer
         $question->options->answers = array_values($question->options->answers);
         return 0;
@@ -76,20 +117,21 @@ class question_formulas_qtype extends default_questiontype {
     
     /// Attempt to insert or update a record in the database. May throw error
     function question_options_insertdb($dbname, &$record, $oldid) {
+        global $DB;
         if (isset($oldid)) {
             $record->id = $oldid;    // if there is old id, reuse it.
-            if (!update_record($dbname, $record))
-                throw new Exception("Could not update quiz record in database $dbname! (id=$oldid)");
+            $DB->update_record($dbname, $record);
         }
-        else {
-            if (!$record->id = insert_record($dbname, $record))
-                throw new Exception("Could not insert quiz record in database $dbname! (id=$oldid)");
-        }
+        else
+            $record->id = $DB->insert_record($dbname, $record);
     }
 
 
     /// Save the varsdef, answers and units to the database tables from the editing form
     function save_question_options($question) {
+        global $DB;
+        
+        $context = $question->context;
         $errcode = $this->get_question_options_part($question); // get old options from the database, id will be reused if it exist
         $oldextra = ($errcode == 0 || $errcode >= 2) ? $question->options->extra : null;
         $oldanswers = ($errcode == 0) ? $question->options->answers : null;
@@ -104,19 +146,28 @@ class question_formulas_qtype extends default_questiontype {
             
             $idcount = 0;
             foreach ($newanswers as $i=>$ans) {
+                // subqtext and feedback are now arrays so can't save it like that
+                $subqtextarr = $ans->subqtext;
+                $ans->subqtext = $subqtextarr['text'];
+                $ans->subqtextformat = $subqtextarr['format'];
+                $feedbackarr = $ans->feedback;
+                $ans->feedback = $feedbackarr['text'];
+                $ans->feedbackformat = $feedbackarr['format'];
                 $this->question_options_insertdb('question_formulas_answers', $ans, isset($oldanswers[$idcount]) ? $oldanswers[$idcount++]->id : null);
-                $newanswerids[$i] = $ans->id;
+                $ans->subqtext = $this->import_or_save_files($subqtextarr, $context, 'qtype_formulas', 'answersubqtext', $ans->id);
+                $ans->feedback = $this->import_or_save_files($feedbackarr, $context, 'qtype_formulas', 'answerfeedback', $ans->id);
+                // we need to update the subqtext filed in database now that urls have been rewritten
+                $DB->update_record('question_formulas_answers', $ans);
             }
             
             // delete remaining used records
             for ($i=count($newanswers); $i<count($oldanswers); ++$i)
-                delete_records('question_formulas_answers', 'id', $oldanswers[$i]->id);
+                $DB->delete_records('question_formulas_answers', array('id' => $oldanswers[$i]->id));
             
             $newextra = new stdClass;
             $newextra->questionid  = $question->id;
             $extras = $this->subquestion_option_extras();
             foreach ($extras as $extra)  $newextra->$extra = trim($question->$extra);
-            $newextra->answerids   = implode(',',$newanswerids);
             $this->question_options_insertdb('question_formulas', $newextra, isset($oldextra) ? $oldextra->id : null);
         } catch (Exception $e) {
             return (object)array('error' => $e->getMessage());
@@ -127,17 +178,18 @@ class question_formulas_qtype extends default_questiontype {
 
 
     /// Override the parent save_question in order to change the defaultgrade.
-    function save_question($question, $form, $course) {
+    function save_question($question, $form) {
         $form->defaultgrade = array_sum($form->answermark); // the default grade is the total grade of its subquestion
-        return parent::save_question($question, $form, $course);
+        return parent::save_question($question, $form);
     }
 
 
     /// Deletes question from the question-type specific tables with $questionid
-    function delete_question($questionid) {
-        delete_records('question_formulas', 'questionid', $questionid);
-        delete_records('question_formulas_answers', 'questionid', $questionid);
-        return true;
+    function delete_question($questionid, $contextid) {
+        global $DB;
+        $DB->delete_records('question_formulas', array('questionid' => $questionid));
+        $DB->delete_records('question_formulas_answers', array('questionid' => $questionid));
+        parent::delete_question($questionid, $contextid);
     }
     
     
@@ -204,6 +256,7 @@ class question_formulas_qtype extends default_questiontype {
     
     /// The first line stores the variables and the following lines store the responses for each subquestions
     function save_session_and_responses(&$question, &$state) {
+        global $DB;
         $responses_str = '';
         foreach ($question->options->answers as $i => $part) {
             if ($state->trials[$i] > 0) // if the subquestion has been tried, store the number of trial and grading result
@@ -219,7 +272,7 @@ class question_formulas_qtype extends default_questiontype {
         $responses_str .= $this->qv->vstack_get_serialization($state->randomvars) . "\n"; // the remaining part line is the random variables of the session
         
         // Set the legacy answer field
-        if (!set_field('question_states', 'answer', $responses_str, 'id', $state->id)) {
+        if (!$DB->set_field('question_states', 'answer', $responses_str, array('id' => $state->id))) {
             return false;
         }
         return true;
@@ -231,18 +284,20 @@ class question_formulas_qtype extends default_questiontype {
     
     /// there is need for the split of javascript for the editing and quiz
     function get_html_head_contributions(&$question, &$state) {
-        $baseurl = $this->plugin_baseurl();
-        require_js($baseurl . '/script/quiz.js');
-        require_js($baseurl . '/script/formatcheck.js');
-        return parent::get_html_head_contributions($question, $state);
+        global $PAGE;
+        $PAGE->requires->js('/question/type/formulas/script/quiz.js');
+        $PAGE->requires->js('/question/type/formulas/script/formatcheck.js');
+        $PAGE->requires->js('/lib/overlib/overlib.js', true);
+        $PAGE->requires->js('/lib/overlib/overlib_cssstyle.js', true);
+        parent::get_html_head_contributions($question, $state);
     }
     
     
     function get_editing_head_contributions() {
-        $baseurl = $this->plugin_baseurl();
-        require_js($baseurl . '/script/editing.js');
-        require_js($baseurl . '/script/formatcheck.js');
-        return parent::get_editing_head_contributions();
+        global $PAGE;
+        $PAGE->requires->js('/question/type/formulas/script/editing.js');
+        $PAGE->requires->js('/question/type/formulas/script/formatcheck.js');
+        parent::get_editing_head_contributions();
     }
     
     
@@ -383,6 +438,7 @@ class question_formulas_qtype extends default_questiontype {
         $sub = $this->get_subquestion_all_options($question, $state, $cmoptions, $options, $i);
         $part = &$question->options->answers[$i];
         $localvars = $this->get_local_variables($part, $state);
+        $context = $this->get_context_by_category_id($question->category);
         $feedbacktext = '';
         $feedback = '';
         $mark = '';
@@ -394,6 +450,8 @@ class question_formulas_qtype extends default_questiontype {
             if ($sub->fraction == 0)  $feedbacktext = get_string('incorrect','quiz');
             $feedbacktext = ' <span class="grade '.$sub->feedbackclass.'"> '.$feedbacktext.'</span> ';
             $feedback = $this->get_substituted_question_texts($question, $cmoptions, $localvars, $part->feedback, 'feedback formulas_local_feedback');
+            $feedback = quiz_rewrite_question_urls($feedback, 'pluginfile.php',
+                $context->id, 'qtype_formulas', 'answerfeedback', array($state->attempt, $state->question), $part->id);
         }
         if ($sub->showmark) {
             $csub = clone $sub;
@@ -408,6 +466,9 @@ class question_formulas_qtype extends default_questiontype {
             $subqreplaced = str_replace('{_m}', $mark, $subqreplaced);
             $mark = '';    // if the mark placeholder is specified, there is no need to add another one next to submit button
         }
+        $subqreplaced = quiz_rewrite_question_urls($subqreplaced, 'pluginfile.php',
+            $context->id, 'qtype_formulas', 'answersubqtext', array($state->attempt, $state->question), $part->id);
+                
         $subqreplaced .= '<div class="formulas_submit">' . $feedback . $submitbutton . $mark . $sub->feedbackimage . $feedbacktext . $gradinginfo . '</div>';
         return '<div class="formulas_subpart">' . $subqreplaced . '</div>';
     }
@@ -833,8 +894,34 @@ class question_formulas_qtype extends default_questiontype {
             foreach($tags as $tag) {
                 $qotag = &$qo->$tag;
                 //$qotag[] = $format->getpath($answer, array('#',$tag,0,'#','text',0,'#'),'0',false,($nodeqtype == 'coordinates') ? '' : 'error');
-                $qotag[] = addslashes($format->getpath($answer, array('#',$tag,0,'#','text',0,'#'),'0',false,'error'));
+                $qotag[] = $format->getpath($answer, array('#',$tag,0,'#','text',0,'#'),'0',false,'error');
             }
+            
+            $subqtexttext = $format->getpath($answer, array('#', 'subqtext', 0, '#', 'text', 0, '#'), '', true);
+            $subqtextformat = $format->trans_format($format->getpath($answer, array('#','subqtext',0,'@','format'), 'moodle_auto_format'));
+            $subqtextfiles = array();
+            $files = $format->getpath($answer, array('#', 'subqtext', 0, '#', 'file'), array());
+            foreach ($files as $file) {
+                $data = new stdclass;
+                $data->content = $file['#'];
+                $data->name = $file['@']['name'];
+                $data->encoding = $file['@']['encoding'];
+                $subqtextfiles[] = $data;
+            }
+            $qo->subqtext[] = array('text'=>$subqtexttext, 'format'=>$subqtextformat, 'files'=>$subqtextfiles);
+            
+            $fbtext = $format->getpath($answer, array('#', 'feedback', 0, '#', 'text', 0, '#'), '', true);
+            $fbformat = $format->trans_format($format->getpath($answer, array('#','feedback',0,'@','format'), 'moodle_auto_format'));
+            $fbfiles = array();
+            $files = $format->getpath($answer, array('#', 'feedback', 0, '#', 'file'), array());
+            foreach ($files as $file) {
+                $data = new stdclass;
+                $data->content = $file['#'];
+                $data->name = $file['@']['name'];
+                $data->encoding = $file['@']['encoding'];
+                $fbfiles[] = $data;
+            }
+            $qo->feedback[] = array('text'=>$fbtext, 'format'=>$fbformat, 'files'=>$fbfiles);
         }
         $qo->defaultgrade = array_sum($qo->answermark); // make the defaultgrade consistent if not specified
         
@@ -851,6 +938,8 @@ class question_formulas_qtype extends default_questiontype {
      * @return text string containing the question data in XML format
      */
     function export_to_xml(&$question,&$format,&$extra) {
+        $fs = get_file_storage();
+        $contextid = $question->contextid;
         $expout = '';
         $extras = $this->subquestion_option_extras();
         foreach ($extras as $extra)
@@ -861,85 +950,24 @@ class question_formulas_qtype extends default_questiontype {
             $expout .= "<answers>\n";
             foreach ($tags as $tag)
                 $expout .= " <$tag>\n  ".$format->writetext($answer->$tag)." </$tag>\n";
+            
+            $subqfiles = $fs->get_area_files($contextid, 'qtype_formulas', 'answersubqtext', $answer->id);
+            $subqtextformat = $format->get_format($answer->subqtextformat);
+            $expout .= " <subqtext format=\"$subqtextformat\">\n";
+            $expout .= $format->writetext($answer->subqtext);
+            $expout .= $format->writefiles($subqfiles);
+            $expout .= " </subqtext>\n";
+            
+            $fbfiles = $fs->get_area_files($contextid, 'qtype_formulas', 'answerfeedback', $answer->id);
+            $feedbackformat = $format->get_format($answer->feedbackformat);
+            $expout .= " <feedback format=\"$feedbackformat\">\n";
+            $expout .= $format->writetext($answer->feedback);
+            $expout .= $format->writefiles($fbfiles);
+            $expout .= " </feedback>\n";
+            
             $expout .= "</answers>\n";
         }
         return $expout;
-    }
-    
-    
-    /**
-     * Backup the data in the question to a backup file.
-     *
-     * This function is used by question/backuplib.php to create a copy of the data
-     * in the question so that it can be restored at a later date. The method writes
-     * all the supplementary coordinate data, including the answers of the subquestions.
-     *
-     * @param $bf the backup file to write the information to
-     * @param $preferences backup preferences in effect (not used)
-     * @param $questionid the ID number of the question being backed up
-     * @param $level the indentation level of the data being written
-     * 
-     * @return bool true if the backup was successful, false if it failed.
-     */
-    function backup($bf,$preferences,$questionid,$level=6) {
-        $question->id = $questionid;
-        $this->get_question_options($question); // assume no error
-        
-        // Start tag of data
-        $status = true;
-        $status = $status && fwrite ($bf,start_tag('FORMULAS',$level,true));
-        $extras = $this->subquestion_option_extras();
-        foreach ($extras as $extra)
-            fwrite ($bf,full_tag(strtoupper($extra), $level+1, false, $question->options->extra->$extra));
-        
-        // Iterate over each answer and write out its fields
-        $tags = $this->subquestion_answer_tags();
-        foreach ($question->options->answers as $var) {
-            $status = $status && fwrite ($bf,start_tag('ANSWERS',$level+1,true));
-            foreach ($tags as $tag)
-                fwrite ($bf, full_tag(strtoupper($tag), $level+2, false, $var->$tag));
-            $status = $status && fwrite ($bf,end_tag('ANSWERS',$level+1,true));
-        }
-        
-        // End tag of data
-        $status = $status && fwrite ($bf,end_tag('FORMULAS',$level,true));
-        return $status;
-    }
-    
-    
-    /**
-     * Restores the data in a backup file to produce the original question.
-     *
-     * This method is used by question/restorelib.php to restore questions saved in
-     * a backup file to the database. It reads the file directly and writes the information
-     * straight into the database.
-     *
-     * @param $old_question_id the original ID number of the question being restored
-     * @param $new_question_id the new ID number of the question being restored
-     * @param $info the XML parse tree containing all the restore information
-     * @param $restore information about the current restore in progress
-     * 
-     * @return bool true if the backup was successful, false if it failed.
-     */
-    function restore($old_question_id,$new_question_id,$info,$restore) {
-        $data = $info['#']['FORMULAS'][0];
-        $qo = new stdClass;
-        $qo->id          = $new_question_id;
-        $qo->qtype       = $this->name();
-        $extras = $this->subquestion_option_extras();
-        foreach ($extras as $extra)
-            $qo->$extra = backup_todb($data['#'][strtoupper($extra)]['0']['#']);
-        
-        // Loop over each answer block found in the XML
-        $tags = $this->subquestion_answer_tags();
-        $answers = $data['#']['ANSWERS'];  
-        foreach($answers as $answer) {
-            foreach($tags as $tag) {
-                $qotag = &$qo->$tag;
-                $qotag[] = backup_todb($answer['#'][strtoupper($tag)]['0']['#']);
-            }
-        }
-        return is_bool($this->save_question_options($qo)) ? true : false;
     }
     
     
@@ -965,7 +993,7 @@ class question_formulas_qtype extends default_questiontype {
             }
             try {
                 $pattern = '\{(_[0-9u][0-9]*)(:[^{}]+)?\}';
-                preg_match_all('/'.$pattern.'/', $part->subqtext, $matches);
+                preg_match_all('/'.$pattern.'/', $part->subqtext['text'], $matches);
                 $boxes = array();
                 foreach ($matches[1] as $j => $match)  if (array_key_exists($match, $boxes))
                     throw new Exception(get_string('error_answerbox_duplicate','qtype_formulas'));
@@ -976,7 +1004,7 @@ class question_formulas_qtype extends default_questiontype {
             }
         }
         
-        $placeholdererrors = $this->check_placeholder($form->questiontext, $validanswers);
+        $placeholdererrors = $this->check_placeholder(is_string($form->questiontext) ? $form->questiontext : $form->questiontext['text'], $validanswers);
         $errors = array_merge($errors, $placeholdererrors);
         
         $instantiationerrors = $this->validate_instantiation($data, $validanswers);
@@ -1098,6 +1126,26 @@ class question_formulas_qtype extends default_questiontype {
             if ($skip)  continue;   // if no answer or correctness conditions, it cannot check other parts, so skip
             $res->answers[$i] = (object)array('questionid' => $form->id);   // create an object of answer with the id
             foreach ($tags as $tag)  $res->answers[$i]->{$tag} = trim($form->{$tag}[$i]);
+            
+            $subqtext = array();
+            $subqtext['text'] = $form->subqtext[$i]['text'];
+            $subqtext['format'] = $form->subqtext[$i]['format'];
+            if (isset($form->subqtext[$i]['itemid'])) {
+                $subqtext['itemid'] = $form->subqtext[$i]['itemid'];
+            } elseif (isset($form->subqtext[$i]['files'])) {
+                $subqtext['files'] = $form->subqtext[$i]['files'];
+            }
+            $res->answers[$i]->subqtext = $subqtext;
+            
+            $fb = array();
+            $fb['text'] = $form->feedback[$i]['text'];
+            $fb['format'] = $form->feedback[$i]['format'];
+            if (isset($form->feedback[$i]['itemid'])) {
+                $fb['itemid'] = $form->feedback[$i]['itemid'];
+            } elseif (isset($form->feedback[$i]['files'])) {
+                $fb['files'] = $form->feedback[$i]['files'];
+            }
+            $res->answers[$i]->feedback = $fb;
         }
         if (count($res->answers) == 0)
             $res->errors["answermark[0]"] = get_string('error_no_answer','qtype_formulas');

@@ -22,6 +22,10 @@ class question_edit_formulas_form extends question_edit_form {
     * @param MoodleQuickForm $mform the form being built.
     */
     function definition_inner(&$mform) {
+        global $PAGE;
+        $PAGE->requires->js('/question/type/formulas/script/editing.js');
+        $PAGE->requires->js('/question/type/formulas/script/formatcheck.js');
+        
         // hide the unused form fields
         $mform->removeElement('defaultgrade');        
         $mform->addElement('hidden', 'defaultgrade');        
@@ -36,18 +40,14 @@ class question_edit_formulas_form extends question_edit_form {
         
         
         // the random and global variables and the main question
-        $mform->insertElementBefore($mform->createElement('static', 'help_formulas', get_string('help'),
-            get_string('helpdirection', 'qtype_formulas')) , 'questiontext');
-        $mform->setHelpButton('help_formulas', array('questionoptions', get_string('helponquestionoptions', 'qtype_formulas'), 'qtype_formulas'));
-        
+        $mform->insertElementBefore($mform->createElement('header','mainq', get_string('mainq', 'qtype_formulas'),
+            ''), 'questiontext');
+            
         $mform->insertElementBefore($mform->createElement('textarea', 'varsrandom', get_string('varsrandom', 'qtype_formulas'),
             array('rows' => 8, 'style' => 'width: 100%')) , 'questiontext');
             
         $mform->insertElementBefore($mform->createElement('textarea', 'varsglobal', get_string('varsglobal', 'qtype_formulas'),
             array('rows' => 10, 'style' => 'width: 100%')) , 'questiontext');
-        
-        $mform->insertElementBefore($mform->createElement('header','mainq', get_string('mainq', 'qtype_formulas'),
-            ''), 'help_formulas');
         
         
         // the subquestion answers
@@ -149,11 +149,10 @@ class question_edit_formulas_form extends question_edit_form {
         $repeated[] =& $mform->createElement('text', 'trialmarkseq', get_string('trialmarkseq', 'qtype_formulas'),
             array('size' => 30));
         $repeatedoptions['trialmarkseq']['default'] = '1, 0.8,';
-        $repeated[] =& $mform->createElement('htmleditor', 'subqtext', get_string('subqtext', 'qtype_formulas'),
-            array('rows' => 12));
-        $repeated[] =& $mform->createElement('hidden', 'feedback', '', '');   // its exact value will be computed while validate
-        //$repeated[] =& $mform->createElement('textarea', 'feedback', get_string('feedback', 'qtype_formulas'),
-        //    array('rows' => 6, 'style' => 'width: 100%'));
+        $repeated[] =& $mform->createElement('editor', 'subqtext', get_string('subqtext', 'qtype_formulas'),
+            array('rows' => 12), $this->editoroptions);
+        $repeated[] =& $mform->createElement('editor', 'feedback', get_string('feedback', 'qtype_formulas'),
+            array('rows' => 5), $this->editoroptions);
         
         $answersoption = 'answers';
         return $repeated;
@@ -175,6 +174,13 @@ class question_edit_formulas_form extends question_edit_form {
                 $tags = $QTYPES[$this->qtype()]->subquestion_answer_tags();
                 foreach ($question->options->answers as $key => $answer) {
                     foreach ($tags as $tag)  $default_values[$tag.'['.$key.']'] = $answer->$tag;
+                    // prepare subquestion text
+                    $subqtid = file_get_submitted_draft_itemid('subqtext['.$key.']');
+                    $subqt = file_prepare_draft_area($subqtid, $this->context->id, 'qtype_formulas', 'answersubqtext', empty($answer->id)?null:(int)$answer->id, $this->fileoptions, $answer->subqtext);
+                    $default_values['subqtext['.$key.']'] = array('text' => $subqt, 'format' => $answer->subqtextformat, 'itemid' => $subqtid);
+                    $subqfbid = file_get_submitted_draft_itemid('feedback['.$key.']');
+                    $subqfb = file_prepare_draft_area($subqfbid, $this->context->id, 'qtype_formulas', 'answerfeedback', empty($answer->id)?null:(int)$answer->id, $this->fileoptions, $answer->feedback);
+                    $default_values['feedback['.$key.']'] = array('text'=>$subqfb, 'format'=>$answer->feedbackformat, 'itemid'=>$subqfbid);
                 }
             }
             $question = (object)((array)$question + $default_values);

@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<XMLDB PATH="question/type/formulas/db" VERSION="20101018" COMMENT="XMLDB file for Moodle question/type/formulas" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<XMLDB PATH="question/type/formulas/db" VERSION="20110807" COMMENT="XMLDB file for Moodle question/type/formulas" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <TABLES>
     <TABLE NAME="question_formulas" COMMENT="Options for formulas question type" NEXT="question_formulas_answers">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="questionid"/>
-        <FIELD NAME="questionid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="id" NEXT="answerids"/>
-        <FIELD NAME="answerids" TYPE="text" LENGTH="small" NOTNULL="true" SEQUENCE="false" PREVIOUS="questionid" NEXT="varsrandom"/>
-        <FIELD NAME="varsrandom" TYPE="text" LENGTH="small" NOTNULL="false" SEQUENCE="false" PREVIOUS="answerids" NEXT="varsglobal"/>
+        <FIELD NAME="questionid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="id" NEXT="varsrandom"/>
+        <FIELD NAME="varsrandom" TYPE="text" LENGTH="small" NOTNULL="false" SEQUENCE="false" PREVIOUS="questionid" NEXT="varsglobal"/>
         <FIELD NAME="varsglobal" TYPE="text" LENGTH="small" NOTNULL="false" SEQUENCE="false" PREVIOUS="varsrandom" NEXT="peranswersubmit"/>
         <FIELD NAME="peranswersubmit" TYPE="int" LENGTH="4" NOTNULL="true" UNSIGNED="false" DEFAULT="1" SEQUENCE="false" PREVIOUS="varsglobal" NEXT="showperanswermark"/>
         <FIELD NAME="showperanswermark" TYPE="int" LENGTH="4" NOTNULL="true" UNSIGNED="false" DEFAULT="1" SEQUENCE="false" PREVIOUS="peranswersubmit"/>
@@ -33,8 +32,10 @@
         <FIELD NAME="ruleid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" PREVIOUS="postunit" NEXT="otherrule"/>
         <FIELD NAME="otherrule" TYPE="text" LENGTH="small" NOTNULL="false" SEQUENCE="false" PREVIOUS="ruleid" NEXT="trialmarkseq"/>
         <FIELD NAME="trialmarkseq" TYPE="text" LENGTH="small" NOTNULL="true" SEQUENCE="false" PREVIOUS="otherrule" NEXT="subqtext"/>
-        <FIELD NAME="subqtext" TYPE="text" LENGTH="small" NOTNULL="false" SEQUENCE="false" PREVIOUS="trialmarkseq" NEXT="feedback"/>
-        <FIELD NAME="feedback" TYPE="text" LENGTH="small" NOTNULL="false" SEQUENCE="false" PREVIOUS="subqtext"/>
+        <FIELD NAME="subqtext" TYPE="text" LENGTH="small" NOTNULL="false" SEQUENCE="false" PREVIOUS="trialmarkseq" NEXT="subqtextformat"/>
+        <FIELD NAME="subqtextformat" TYPE="int" LENGTH="2" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" PREVIOUS="subqtext" NEXT="feedback"/>
+        <FIELD NAME="feedback" TYPE="text" LENGTH="small" NOTNULL="false" SEQUENCE="false" PREVIOUS="subqtextformat" NEXT="feedbackformat"/>
+        <FIELD NAME="feedbackformat" TYPE="int" LENGTH="2" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" PREVIOUS="feedback"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="questionid"/>

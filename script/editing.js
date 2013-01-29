@@ -109,6 +109,11 @@ var formulasform = {
             this.init_checkboxes('id_otherrule_'+i);
             //this.init_checkboxes('id_subqtext_'+i);
             this.init_checkboxes('id_feedback_'+i);
+            
+            var n = document.getElementById('id_feedback_'+i);
+            var loc = n;
+            while (loc!=null && loc.className!='fitem')  loc = loc.parentNode;
+            loc.style.display = 'none';
         } catch (e) {}
         try {
             this.init_checkboxes('id_generalfeedback');
@@ -216,14 +221,20 @@ var formulasform = {
     /// Create checkboxes to show/hide the corresponding input field
     init_checkboxes : function(fieldid, initial_checked) {
         var n = document.getElementById(fieldid);
-        var id = n.id + '_show';
-        if (initial_checked == null)
-            initial_checked = n.value.length != 0;
-        var ctext = initial_checked ? ' checked="checked" ' : '';
-        var s = '<input type="checkbox" onclick="formulas_form_display(\''+fieldid+'\',this.checked)" '+ctext+' id="'+id+'">';
-        var t = '<span onclick="var t=document.getElementById(\''+id+'\'); t.checked = !t.checked; formulas_form_display(\''+fieldid+'\',t.checked);">'+n.parentNode.parentNode.firstChild.innerHTML+'</span>';
-        n.parentNode.parentNode.firstChild.innerHTML = s+t;
-        formulas_form_display(fieldid, initial_checked);
+        var loc = n;
+        while (loc!=null && loc.className!='fitem')  loc = loc.parentNode;
+        
+        if (loc!=null) {
+            var id = n.id + '_show';
+            if (initial_checked == null)
+                initial_checked = n.value.length != 0;
+            var ctext = initial_checked ? ' checked="checked" ' : '';
+            var s = '<input type="checkbox" onclick="formulas_form_display(\''+fieldid+'\',this.checked)" '+ctext+' id="'+id+'">';
+            var t = '<span onclick="var t=document.getElementById(\''+id+'\'); t.checked = !t.checked; formulas_form_display(\''+fieldid+'\',t.checked);">'+loc.firstChild.innerHTML+'</span>';
+            
+            loc.firstChild.innerHTML = s+t;
+            formulas_form_display(fieldid, initial_checked);
+        }
     },
     
     /// Allow a more user friend way to select the commonly used criteria
@@ -469,21 +480,37 @@ var formulasform = {
     
     /// Show the questiontext with variables replaced
     update_preview : function() {
-        var globaltext = document.getElementsByName('questiontext')[0];
+        try {
+            var globaltext = tinyMCE.get('id_questiontext').getContent();
+        }
+        catch(e) {
+            var globaltext = document.getElementById('id_questiontext').value;
+        }
         var idataset = document.getElementById('id_formulas_idataset').value;
-        var res = this.substitute_variables_in_text(globaltext.value, this.get_variables_mapping(idataset, ['random','global']));
+        var res = this.substitute_variables_in_text(globaltext, this.get_variables_mapping(idataset, ['random','global']));
         
         for (var i=0; i<this.numsubq; i++) {
-            var txt = document.getElementsByName('subqtext' + '[' + i + ']')[0];
-            var fb = document.getElementsByName('feedback' + '[' + i + ']')[0];
+            try {
+                var txt = tinyMCE.get('id_subqtext_'+i).getContent();
+            }
+            catch(e) {
+                var txt = document.getElementById('id_subqtext_'+i).value;
+            }
+            try {
+                var fb = tinyMCE.get('id_feeback_'+i).getContent();
+            }
+            catch(e) {
+                var fb = '';
+                //var fb = document.getElementById('id_feedback_'+i).value;
+            }
             var ans = document.getElementsByName('answer' + '[' + i + ']')[0];
             var ph = document.getElementsByName('placeholder' + '[' + i + ']')[0];
             var unit = document.getElementsByName('postunit' + '[' + i + ']')[0];
             var answer = this.get_variables_mapping(idataset, ['answer'+i])['@'+(i+1)];
             if (answer == null)  continue;
             var mapping = this.get_variables_mapping(idataset, ['random','global','local'+i]);
-            var t = txt.value + '<div style="border: solid 1px #aaaaaa; margin : 10px">'+answer+' '+unit.value.split('=')[0]+'</div>';
-            t += (fb.value.length > 0) ? '<div style="border: solid 1px #aaaaaa; margin : 10px">'+fb.value+'</div>' : '';
+            var t = txt + '<div style="border: solid 1px #aaaaaa; margin : 10px">'+answer+' '+unit.value.split('=')[0]+'</div>';
+            t += (fb.length > 0) ? '<div style="border: solid 1px #aaaaaa; margin : 10px">'+fb+'</div>' : '';
             t = this.substitute_variables_in_text(t, mapping);
             t = '<div style="border: solid 1px #ddddff;"> ' + t + '</div>';
             if (ph.value == '')

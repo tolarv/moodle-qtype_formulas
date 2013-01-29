@@ -1,0 +1,68 @@
+ <span style="font-size: 120%; font-weight: bold;">QuestionOptions</span>
+ 
+ <div style="font-style: italic; margin-top: 3px;">Different options in the question editing page</div>
+ 
+ </div>
+ <p>The following are the explanation of options in the editing page of 
+formulas question type. These options are divided into the global 
+options that affect the all subquestions answer and the local options 
+for each individual answer. </p><p></p><p></p><hr><h1><a name="Question_text"></a>Question text<a href="#Question_text" class="section_anchor"></a></h1><p>In addition to the main question text, you can also use global variables and placeholder here. </p><p>The
+ global variables will be replaced by its value and the placeholders 
+will be replaced the subquestion. A simple example with variables <tt> A, B, C </tt> and placeholders <tt> #1, #2, #3 </tt> are shown. </p><pre class="prettyprint">What is the result of {A} + {B}?<br>{#1}<br>What is the result of {A} - {B}?<br>{#2}<br>What is the result of {C} / {B}?<br>{#3}</pre><hr><h1><a name="Random_variables"></a>Random variables<a href="#Random_variables" class="section_anchor"></a></h1><p>New
+ random values can be generated whenever a question is created.  It can 
+be done by defining a set of elements to choose from: </p><pre class="prettyprint">A = {1,2,3};<br>C = {[1,-1], [2,-2], [3,-3]};<br>E = {10:100:10, 100, 1000};</pre><p>The
+ elements can be number, string or lists of them. During the start of a 
+quiz, one element will be drawn from the set and assign to the variable 
+on the left.  Also, for the set of number, you can use the range 
+notation like 10:100:10 (e.g. E). </p><h1><a name="Global_variables"></a>Global variables<a href="#Global_variables" class="section_anchor"></a></h1><p>Formula
+ can be specified here to manipulate the instantiated random variables 
+(all random variables are included here). The full list of mathematical 
+function and operation is given in the documentation. </p><pre class="prettyprint">a = 1.11111;<br>b = exp(3);<br>c = A + a + b;<br>d = sin(1.5*pi()) + c;<br>e = round(a, 0);<br>f = [0,1,2,3][A];<br>g = ["zero","one","two","three"][A];<br>distance = sqrt(a*a + b*b);</pre><h1><a name="Per_answer_grading_result"></a>Per answer grading result<a href="#Per_answer_grading_result" class="section_anchor"></a></h1><p>Grading results can be shown for each subquestion/answer, instead of whole question. </p><h1><a name="Per_answer_submit_button"></a>Per answer submit button<a href="#Per_answer_submit_button" class="section_anchor"></a></h1><p>This option only has effect in the adaptive mode. </p><p>Submission button can be shown for each subquestion/answer, instead of whole question. </p><h1><a name="Global_-_Trial_mark_sequence"></a>Global - Trial mark sequence<a href="#Global_-_Trial_mark_sequence" class="section_anchor"></a></h1><p>This option only has effect in the adaptive mode. Required. </p><p>This
+ option will override the behavior of penalty in adaptive mode. Default 
+behaviour of adaptive mode always has infinite trial and deduct equal 
+mark for each wrong trial.  With this option, both finite trial or 
+infinite trials can be used. For finite trial, say, you want to have 
+three trials, the first one has 100%, second one has 60% and third one 
+has 20%, you can type: </p><pre class="prettyprint">1.00, 0.6, 0.2</pre><p>If you want to have infinite trial, each has 10% penalty, you can end the sequence by a comma: </p><pre class="prettyprint">1, 0.9,</pre><h1><a name="Global_-_Deduction_for_wrong_unit"></a>Global - Deduction for wrong unit<a href="#Global_-_Deduction_for_wrong_unit" class="section_anchor"></a></h1><p>This option specify the mark you want to penalize the student for a wrong unit. </p><p>It
+ takes value between 0 to 1. If it takes value 1, the unit and answer 
+must be correct at the same time in order to get mark. That is the unit 
+and answer are treated as one entity. On the other hand, if it takes 
+value 0, students can get full mark for only correct answer, all random 
+string will have no effect at the end of answer. Therefore, it is 
+recommended to use value 1 whenever the answer has no associated unit. </p><h1><a name="Global_-_Basic_conversion_rules"></a>Global - Basic conversion rules<a href="#Global_-_Basic_conversion_rules" class="section_anchor"></a></h1><p>This question type has a build-in unit conversion system and has basic conversion rules.  </p><p>The
+ basic one is the "Common SI unit" rules that will convert standard unit
+ such as unit for length, say, km, m, cm and mm. This option has no 
+effect if no unit has been used. </p><hr><h1><a name="Default_answer_mark"></a>Default answer mark<a href="#Default_answer_mark" class="section_anchor"></a></h1><p>Required.
+ The mark for the answer of this subquestion, which should be a number 
+greater than 0. The default mark of the whole question is the sum of the
+ default mark of all subquestions. </p><p>Note: If this answer mark field is left blank, this subquestion will be deleted when the question is successfully saved. </p><h1><a name="Local_variables"></a>Local variables<a href="#Local_variables" class="section_anchor"></a></h1><p>You
+ can define variables here similar to the global variables. The scope 
+includes all global variables and it can be used in the answer, 
+subquestion and grading variables. Note that each subquestion has its 
+own scope of local variables. </p><h1><a name="Answer_type"></a>Answer type<a href="#Answer_type" class="section_anchor"></a></h1><p>There
+ are four answer types. The number, numeric and numerical formula 
+requires a list of number as answer. The algebraic formula requires a 
+list of string (formula) as answer. </p><p>Different answer type will 
+impose different restriction while inputting answer, so students will 
+need to know how to input them here. The format check in the quiz will 
+also tell them when they type something wrong. Please read the 
+documentation for details. </p><h1><a name="Answer"></a>Answer<a href="#Answer" class="section_anchor"></a></h1><p>Required.
+ It is a list of number, or a list of string depending on the answer 
+type chosen. When there is only one answer, a number or string can be 
+entered directly. Please note that the number of elements in the list 
+defines the number of answer box for this subquestion.  </p><pre class="prettyprint">123<br>[1, 0, 0, 1]<br>a<br>[1, a, b]<br>"exp(-a t)"<br>["vx t","vy t - 0.5 a t^2"]</pre><h1><a name="Grading_variables"></a>Grading variables<a href="#Grading_variables" class="section_anchor"></a></h1><p>This scope include all local variables and the responses from the student. See documentation for the advance usage. </p><h1><a name="Grading_criteria"></a>Grading criteria<a href="#Grading_criteria" class="section_anchor"></a></h1><p>Required.
+ You can choose either relative error and absolute error with error 
+range. Please note that relative error cannot be used in the algebraic 
+answer type. </p><p>For the precise definition of the relative error and absolute error when there is more than one answer box, see documentation. </p><h1><a name="Unit"></a>Unit<a href="#Unit" class="section_anchor"></a></h1><p>You
+ can specify the unit here. It is specially designed for SI unit, so an 
+empty space represents the 'product' of different 'base unit' and <tt> ^ </tt> for the exponent. Also, <tt> / </tt> can be used for inverse exponent. Any permutation of the base unit are treated the same. </p><p>Students are required to use the same input format. For example, </p><pre class="prettyprint">1 m<br>0.1 m^2<br>20 m s^(-1)<br>400 kg m/s<br>100 kW</pre><h1><a name="Other_rules"></a>Other rules<a href="#Other_rules" class="section_anchor"></a></h1><p>It defines the conversion rules for other accepted base units. See documentation for the advance usage. </p><h1><a name="Placeholder"></a>Placeholder<a href="#Placeholder" class="section_anchor"></a></h1><p>A
+ placeholder is a used to identify the location in the main question 
+text that will be replaced by the content in the subquestion. It is a 
+string of alphanumeric characters prefixed by '<strong>#</strong>', such as #1, #2a, #2b and #A. </p><p>If
+ this field is left empty, the content in the subquestion answer format 
+will be appended at the end of the main question text. </p><h1><a name="Subquestion_text"></a>Subquestion text<a href="#Subquestion_text" class="section_anchor"></a></h1><p>Subquestion text and the arrangement of answer boxes can be specified here. The answer box placeholders that can be used are: </p><pre class="prettyprint">{_0}<br>{_1}<br>{_2}<br>...<br>{_u}</pre><p>The <tt> {_0}, {_1}, {_2} </tt> are the input boxes for numbers and <tt> {_u} </tt> is the input box for unit. </p><p>All missing box are automatically appended at the end. A special case is that if <tt> {_0}, {_u} </tt> are specified consecutively, and there is only one numerical answer and unit., i.e. <tt> {_0}{_u} </tt>, they will be combined into a single long input answer box for both answer and unit. </p>
+ </div>
+ </div>
+ </td></tr><tr>
+</tr></tbody></table>
+ </div>
