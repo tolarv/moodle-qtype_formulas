@@ -51,9 +51,10 @@ class question_formulas_qtype extends default_questiontype {
         $fs = get_file_storage();
         
         parent::move_files($questionid, $oldcontextid, $newcontextid);
-        $this->move_files_in_answers($questionid, $oldcontextid, $newcontextid);
         $fs->move_area_files_to_new_context($oldcontextid,
-            $newcontextid, 'qtype_formulas', 'subqtext', $questionid);
+            $newcontextid, 'qtype_formulas', 'answersubqtext', $questionid);
+        $fs->move_area_files_to_new_context($oldcontextid,
+            $newcontextid, 'qtype_formulas', 'answerfeedback', $questionid);
     }
     
     
@@ -61,28 +62,23 @@ class question_formulas_qtype extends default_questiontype {
         $fs = get_file_storage();
 
         parent::delete_files($questionid, $contextid);
-        $fs->delete_area_files($contextid, 'qtype_formulas', 'subqtext', $questionid);
+        $fs->delete_area_files($contextid, 'qtype_formulas', 'answersubqtext', $questionid);
+        $fs->delete_area_files($contextid, 'qtype_formulas', 'answerfeedback', $questionid); 
     }
     
     
     function check_file_access($question, $state, $options, $contextid, $component, $filearea, $args) {
         $itemid = reset($args);
-        if ($component == 'qtype_formulas' && $filearea == 'answersubqtext') {
+        if ($component == 'qtype_formulas' && ($filearea == 'answersubqtext' || $filearea == 'answerfeedback')) {
             // check if answer id exists
             for ($i = 0; $i < count($question->options->answers); $i++) {
                 if ($question->options->answers[$i]->id == $itemid) return true;
             }
             return false;
-        }
-        if ($component == 'qtype_formulas' && $filearea == 'answerfeedback') {
-            // check if answer id exists
-            for ($i = 0; $i < count($question->options->answers); $i++) {
-                if ($question->options->answers[$i]->id == $itemid) return true;
-            }
-            return false;
-        }
+        } else {
         return parent::check_file_access($question, $state, $options, $contextid, $component,
             $filearea, $args);
+    }
     }
     
     
@@ -835,18 +831,29 @@ class question_formulas_qtype extends default_questiontype {
     }
     
     
-    /// Define the equivalence of the responses of subquestions
-    /*function compare_responses(&$question, $state, $teststate) {
+    /// Define the equivalence of the responses
+    function compare_responses(&$question, $state, $teststate) {
         $res = true;
+        $this->rationalize_responses($question, $state);
         foreach ($question->options->answers as $i => $part) {
-            // In case of missing response, we assume that it is the same as old answer, i.e. don't check
             $names = array("${i}_");    // response["0_"] etc is not used when we have multiple box
             foreach (range(0,$part->numbox) as $j)  $names[] = "${i}_$j";
-            foreach ($names as $name)  if (isset($state->responses[$name]))
-                $res = $res && (trim($state->responses[$name]) === $teststate->responses[$name]);
+            foreach ($names as $name) {
+                if (array_key_exists($name, $state->responses)) {
+                    $value1 = trim($state->responses[$name]);
+                } else {
+                    $value1 = '';
+                }
+                if (array_key_exists($name, $teststate->responses)) {
+                    $value2 = trim($teststate->responses[$name]);
+                } else {
+                    $value2 = '';
+                }
+                $res = $res && (((string) $value1) === ((string) $value2));
+            }
         }
         return $res;
-    }*/
+    }
     
     
     /// Return a summary string of student responses. Need to override because it prints the data...
@@ -886,17 +893,25 @@ class question_formulas_qtype extends default_questiontype {
         $extras = $this->subquestion_option_extras();
         foreach ($extras as $extra)
             $qo->$extra = $format->getpath($data, array('#',$extra,0,'#','text',0,'#'),'',true);
-        
+        if ($qo->peranswersubmit == '') {
+            $qo->peranswersubmit = 1;
+        }
+        if ($qo->showperanswermark == '') {
+            $qo->showperanswermark = 1;
+        }
         // Loop over each answer block found in the XML
         $tags = $this->subquestion_answer_tags();
         $answers = $data['#']['answers'];  
         foreach($answers as $answer) {
             foreach($tags as $tag) {
                 $qotag = &$qo->$tag;
-                //$qotag[] = $format->getpath($answer, array('#',$tag,0,'#','text',0,'#'),'0',false,($nodeqtype == 'coordinates') ? '' : 'error');
-                $qotag[] = $format->getpath($answer, array('#',$tag,0,'#','text',0,'#'),'0',false,'error');
+                if ($tag ==  'trialmarkseq' ) {
+                    $qotag[] = $format->getpath($answer, array('#',$tag,0,'#','text',0,'#'),'1, 0.8,',true);
+                } else {
+                    $qotag[] = $format->getpath($answer, array('#',$tag,0,'#','text',0,'#'),'0',false, 'error');
+                }
             }
-            
+
             $subqtexttext = $format->getpath($answer, array('#', 'subqtext', 0, '#', 'text', 0, '#'), '', true);
             $subqtextformat = $format->trans_format($format->getpath($answer, array('#','subqtext',0,'@','format'), 'moodle_auto_format'));
             $subqtextfiles = array();
@@ -924,7 +939,6 @@ class question_formulas_qtype extends default_questiontype {
             $qo->feedback[] = array('text'=>$fbtext, 'format'=>$fbformat, 'files'=>$fbfiles);
         }
         $qo->defaultgrade = array_sum($qo->answermark); // make the defaultgrade consistent if not specified
-        
         return $qo;
     }
     
@@ -955,14 +969,14 @@ class question_formulas_qtype extends default_questiontype {
             $subqtextformat = $format->get_format($answer->subqtextformat);
             $expout .= " <subqtext format=\"$subqtextformat\">\n";
             $expout .= $format->writetext($answer->subqtext);
-            $expout .= $format->writefiles($subqfiles);
+            $expout .= $format->write_files($subqfiles);
             $expout .= " </subqtext>\n";
             
             $fbfiles = $fs->get_area_files($contextid, 'qtype_formulas', 'answerfeedback', $answer->id);
             $feedbackformat = $format->get_format($answer->feedbackformat);
             $expout .= " <feedback format=\"$feedbackformat\">\n";
             $expout .= $format->writetext($answer->feedback);
-            $expout .= $format->writefiles($fbfiles);
+            $expout .= $format->write_files($fbfiles);
             $expout .= " </feedback>\n";
             
             $expout .= "</answers>\n";

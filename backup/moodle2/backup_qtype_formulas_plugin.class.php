@@ -41,7 +41,7 @@ class backup_qtype_formulas_plugin extends backup_qtype_plugin {
         $formulas_answers = new backup_nested_element('formulas_answers');
         $formulas_answer = new backup_nested_element('formulas_answer', array('id'), array(
             'placeholder', 'answermark', 'answertype', 'numbox', 'vars1', 'answer', 'vars2', 'correctness',
-            'unitpenalty','postunit', 'ruleid', 'otherrule', 'trialmarkseq', 'subqtext', 'subqtextformat', 'feedback'));
+            'unitpenalty','postunit', 'ruleid', 'otherrule', 'trialmarkseq', 'subqtext', 'subqtextformat', 'feedback', 'feedbackformat'));
 
         // don't need to annotate ids nor files
         // Now the own qtype tree
@@ -52,7 +52,13 @@ class backup_qtype_formulas_plugin extends backup_qtype_plugin {
         $pluginwrapper->add_child($formulas);
 
         // set source to populate the data
-        $formulas_answer->set_source_table('question_formulas_answers', array('questionid' => backup::VAR_PARENTID));
+        // Set source to populate the data.
+        $formulasanswer->set_source_sql('
+                SELECT *
+                FROM {question_formulas_answers}
+                WHERE questionid = :questionid
+                ORDER BY id',
+                array('questionid' => backup::VAR_PARENTID));
         $formulas->set_source_table('question_formulas', array('questionid' => backup::VAR_PARENTID));
 
         // don't need to annotate ids nor files
@@ -68,6 +74,7 @@ class backup_qtype_formulas_plugin extends backup_qtype_plugin {
      */
     public static function get_qtype_fileareas() {
         return array(
-            'subqtext' => 'question_created');
+            'answersubqtext' => 'question_formulas_answers',
+            'answerfeedback' => 'question_formulas_answers');
     }
 }

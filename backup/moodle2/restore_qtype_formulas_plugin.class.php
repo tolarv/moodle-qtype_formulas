@@ -84,10 +84,20 @@ class restore_qtype_formulas_plugin extends restore_qtype_plugin {
             // Insert record
             $newitemid = $DB->insert_record('question_formulas_answers', $data);
             // Create mapping
-            $this->set_mapping('question_formulas_answer', $oldid, $newitemid);
+            $this->set_mapping('question_formulas_answers', $oldid, $newitemid);
         } else {
             // Nothing to remap if the question already existed
         }
+    }
+    
+    /**
+     * Return the contents of this qtype to be processed by the links decoder
+     */
+    public static function define_decode_contents() {
+        return array(
+            new restore_decode_content('question_formulas_answers', array('subqtext', 'feedback'),
+                    'question_formulas_answers'),
+        );
     }
     
 }
