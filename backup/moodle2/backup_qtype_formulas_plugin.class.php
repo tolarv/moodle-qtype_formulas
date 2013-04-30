@@ -53,7 +53,7 @@ class backup_qtype_formulas_plugin extends backup_qtype_plugin {
 
         // set source to populate the data
         // Set source to populate the data.
-        $formulasanswer->set_source_sql('
+        $formulas_answer->set_source_sql('
                 SELECT *
                 FROM {question_formulas_answers}
                 WHERE questionid = :questionid
