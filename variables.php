@@ -23,6 +23,7 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
+
 function mycount($a) {
     if ($a === null) {
         return 0;
@@ -30,6 +31,7 @@ function mycount($a) {
         return count($a);
     }
 }
+
 function fact($n) {
     $n = (int) $n;
     if ( $n < 2 )
@@ -273,7 +275,7 @@ class qtype_formulas_variables {
             $data = $this->vstack_get_variable($vstack, $splitted[$i]);
             if ($data->type == 'v') {
                 $tmp = $this->vstack_get_variable($vstack, $data->value);
-                if ($tmp === null)  throw new Exception(get_string('error_vars_undefined','qtype_formulas',$data->value));
+                if ($tmp === null)  throw new Exception(get_string('error_vars_undefined','qtype_formulas',$data->value) . ' in substitute_vname_by_variables');
                 if (!array_key_exists($data->value, $appearedvars))
                     $appearedvars[$data->value] = $this->vstack_add_temporary_variable($vstack, $tmp->type, $tmp->value);
                 $splitted[$i] = $appearedvars[$data->value];
@@ -1222,7 +1224,7 @@ class qtype_formulas_variables {
                 $data = $this->vstack_get_variable($vstack, $splitted[$i]);
                 if ($data->type == 'v') {
                     $tmp = $this->vstack_get_variable($vstack, $data->value);
-                    if ($tmp === null)  throw new Exception(get_string('error_vars_undefined','qtype_formulas',$data->value));
+                    if ($tmp === null)  throw new Exception(get_string('error_vars_undefined','qtype_formulas',$data->value) . ' in substitute_partial_formula');
                     if ($tmp->type == 'n')  $data = $tmp;
                 }
                 $splitted[$i] = $data->value;
