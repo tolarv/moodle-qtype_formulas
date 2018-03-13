@@ -28,7 +28,11 @@ function mycount($a) {
     if ($a === null) {
         return 0;
     } else {
-        return count($a);
+        if ($a instanceof \Countable || is_array($a)) {
+            return count($a);
+        } else {
+            return 1;
+        }
     }
 }
 
