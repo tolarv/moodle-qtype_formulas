@@ -24,6 +24,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+// Helper function to emulate the behaviour of the count() function
+// before php 7.2.
+// Needed because a string is passed as parameter in many places in the code.
 function mycount($a) {
     if ($a === null) {
         return 0;
@@ -797,7 +800,7 @@ class qtype_formulas_variables {
                 if ($sz == 2) {   // two parameters, unary operator
                     if (!($typestr=='s,ln'))  break;
                     if (!array_key_exists($values[0], $this->func_unary))  break;
-                    // The create_function function is depraceted since php 7.2.
+                    // The create_function function is deprecated since php 7.2.
                     // $value = array_map(create_function('$a', 'return floatval('.$values[0].'($a));'), $values[1]);
                     $value = array_map(function ($a) use ($values){return floatval($values[0]($a));}, $values[1]);
                 }
@@ -806,11 +809,11 @@ class qtype_formulas_variables {
                     if ($types[1]!='ln')  $values[1] = array_fill(0, mycount($values[2]), $values[1]);
                     if ($types[2]!='ln')  $values[2] = array_fill(0, mycount($values[1]), $values[2]);
                     if (array_key_exists($values[0], $this->binary_op_map))
-                        // The create_function function is depraceted since php 7.2.
+                        // The create_function function is deprecated since php 7.2.
                         // $value = array_map(create_function('$a,$b', 'return floatval(($a)'.$values[0].'($b));'), $values[1], $values[2]);
                         $value = array_map(function ($a, $b) use ($values){return eval( 'return floatval(($a)'.$values[0].'($b));');}, $values[1], $values[2]);
                     else if (array_key_exists($values[0], $this->func_binary))
-                        // The create_function function is depraceted since php 7.2.
+                        // The create_function function is deprecated since php 7.2.
                         // $value = array_map(create_function('$a,$b', 'return floatval('.$values[0].'($a,$b));'), $values[1], $values[2]);
                         $value = array_map(function ($a, $b) use ($values){return floatval($values[0]($a, $b));}, $values[1], $values[2]);
                     else
