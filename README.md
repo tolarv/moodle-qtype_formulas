@@ -13,7 +13,8 @@ https://code.google.com/p/moodle-coordinate-question/downloads/list
 
 This question type was upgraded to the new question engine introduced in Moodle 2.1 by Jean-Michel Vedrine
 
-This version is compatible with Moodle 2.6 and ulterior versions. It has been tested with Moodle versions up to 3.4 and 3.5dev.
+This version is compatible with Moodle 2.6 and up to 2.9.x. Please note that this version is not compatible with php versions 7.0 and ulteriors. 
+If you are using recent php versions, there is another version available that is compatible with php 7.0, 7.1 and 7.2 in the Moodle plugins Directory.
 
 
 ### Requirements
@@ -37,13 +38,13 @@ Install as any other Moodle question type plugin
 #### Installation Using Git
 
 To install using git type these commands in the root of your Moodle install:
-    git clone git://github.com/jmvedrine/moodle-qtype_formulas.git question/type/formulas
+    git clone https://github.com/jmvedrine/moodle-qtype_formulas/tree/MOODLE_29_STABLE question/type/formulas
     echo '/question/type/formulas/' >> .git/info/exclude
 
 
 #### Installation From Downloaded zip file
 
-Alternatively, download the zip from https://github.com/jmvedrine/moodle-qtype_formulas
+Alternatively, download the zip from https://github.com/jmvedrine/moodle-qtype_formulas/tree/MOODLE_29_STABLE
 
 unzip it into the question/type folder, and then rename the new folder to formulas.
 

@@ -16,12 +16,11 @@ cache:
     - $HOME/.npm
 
 php:
+ - 5.6
  - 7.0
- - 7.1
- - 7.2
 
 env: 
-  - MOODLE_BRANCH=MOODLE_34_STABLE DB=pgsql IGNORE_PATHS=mobile_src
+  - MOODLE_BRANCH=MOODLE_29_STABLE DB=pgsql IGNORE_PATHS=mobile_src
 
 before_install:
   - phpenv config-rm xdebug.ini
