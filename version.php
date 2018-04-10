@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'qtype_formulas';
-$plugin->version   = 2018030100;
+$plugin->version   = 2018030101;
 
 $plugin->cron      = 0;
 $plugin->requires  = 2013101800;
