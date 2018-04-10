@@ -33,6 +33,6 @@ $plugin->dependencies = array(
     'qbehaviour_adaptive' => 2013101800,
     'qbehaviour_adaptivemultipart'     => 2014092500,
 );
-$plugin->release   = '4.42 for Moodle 2.6+';
+$plugin->release   = '4.43 for Moodle 2.6 to 2.9';
 
 $plugin->maturity  = MATURITY_STABLE;
